@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  labels:
+    control-plane: elastic-exporter
+  name: system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+  labels:
+    control-plane: elastic-exporter
+spec:
+  selector:
+    matchLabels:
+      control-plane: elastic-exporter
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        control-plane: elastic-exporter
+    spec:
+      containers:
+        - image: controller:latest
+          args:
+            - --enable-leader-election
+            - --username=elastic
+            - --url=https://logs.example.k8s
+          name: manager
+          resources:
+            limits:
+              cpu: 100m
+              memory: 30Mi
+            requests:
+              cpu: 100m
+              memory: 20Mi
+      terminationGracePeriodSeconds: 10
+      serviceAccount: elastic-exporter-manager

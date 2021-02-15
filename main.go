@@ -1,43 +1,31 @@
 package main
 
 import (
-	"context"
 	"crypto/tls"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/go-co-op/gocron"
+	elasticv1 "github.com/flanksource/elasticsearch-exporter/pkg/api/v1"
+	"github.com/flanksource/elasticsearch-exporter/pkg/controllers"
+	"github.com/flanksource/elasticsearch-exporter/pkg/metrics"
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/spf13/cobra"
-)
-
-const (
-	aggregationName = "origins"
+	zaplogfmt "github.com/sykesm/zap-logfmt"
+	uzap "go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v2"
+	"k8s.io/apimachinery/pkg/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
-	fields = map[string]string{
-		"kubernetes.namespace": "namespace",
-		"kubernetes.node.name": "node-name",
-	}
-
-	documentsCount = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Name: "elasticsearch_documents_count",
-			Help: "A gauge representing documents count by field",
-		},
-		[]string{"cluster", "type", "value"},
-	)
+	scheme   = runtime.NewScheme()
+	setupLog = ctrl.Log.WithName("setup")
 )
-
-func init() {
-	prometheus.MustRegister(documentsCount)
-}
 
 func getClient(url, username, password string) (*elastic.Client, error) {
 	tr := &http.Transport{
@@ -59,72 +47,94 @@ func getClient(url, username, password string) (*elastic.Client, error) {
 	return c, nil
 }
 
-func query(client *elastic.Client, indexPrefix string, clusters []string) {
-	index, err := latestIndex(client, indexPrefix)
-	if err != nil {
-		fmt.Printf("Error getting latest index: %s", err)
-		return
-	}
-	fmt.Println("========================")
-	fmt.Printf("Latest index: %s\n", index)
+func init() {
+	_ = clientgoscheme.AddToScheme(scheme)
 
-	for _, cluster := range clusters {
-		for field, fieldType := range fields {
-			query := NewQuery(client, cluster, field, 15*time.Minute)
-			fmt.Printf("Query: cluster=%s field=%s\n", cluster, field)
-			results, err := query.Query(context.Background(), index)
-			if err != nil {
-				fmt.Printf("Error query: %v", err)
-				return
-			}
-			for k, v := range results {
-				documentsCount.WithLabelValues(cluster, fieldType, k).Set(float64(v))
-			}
-		}
-	}
+	_ = elasticv1.AddToScheme(scheme)
+	// +kubebuilder:scaffold:scheme
 
+	yaml.FutureLineWrap()
 }
 
-func runServer(cmd *cobra.Command, args []string) {
+func setupLogger(opts zap.Options) {
+	configLog := uzap.NewProductionEncoderConfig()
+	configLog.EncodeTime = func(ts time.Time, encoder zapcore.PrimitiveArrayEncoder) {
+		encoder.AppendString(ts.UTC().Format(time.RFC3339Nano))
+	}
+	logfmtEncoder := zaplogfmt.NewEncoder(configLog)
+
+	logger := zap.New(zap.UseFlagOptions(&opts), zap.Encoder(logfmtEncoder))
+	ctrl.SetLogger(logger)
+}
+
+func runController(cmd *cobra.Command, args []string) {
+	metricsAddr, _ := cmd.Flags().GetString("metrics-addr")
+	syncPeriod, _ := cmd.Flags().GetDuration("sync-period")
+	enableLeaderElection, _ := cmd.Flags().GetBool("enable-leader-election")
+
 	url, _ := cmd.Flags().GetString("url")
 	username, _ := cmd.Flags().GetString("username")
 	password := os.Getenv("ELASTIC_PASSWORD")
-	indexPrefix, _ := cmd.Flags().GetString("indexPrefix")
-	interval, _ := cmd.Flags().GetDuration("interval")
-	clusters, _ := cmd.Flags().GetStringArray("clusters")
 
-	client, err := getClient(url, username, password)
+	elasticClient, err := getClient(url, username, password)
 	if err != nil {
-		fmt.Printf("Error creating client: %v", err)
-		return
+		setupLog.Error(err, "failed to get elastic client")
+		os.Exit(1)
 	}
 
-	scheduler := gocron.NewScheduler(time.UTC)
-
-	scheduler.Every(interval).Do(func() {
-		go func() {
-			query(client, indexPrefix, clusters)
-		}()
+	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
+		Scheme:             scheme,
+		MetricsBindAddress: metricsAddr,
+		Port:               9443,
+		SyncPeriod:         &syncPeriod,
+		LeaderElection:     enableLeaderElection,
+		LeaderElectionID:   "ba344e13.flanksource.com",
 	})
+	if err != nil {
+		setupLog.Error(err, "unable to start manager")
+		os.Exit(1)
+	}
 
-	scheduler.StartAsync()
+	controller := &controllers.ElasticMetricReconciler{
+		Log:         ctrl.Log.WithName("controllers").WithName("Template"),
+		Elastic:     elasticClient,
+		MetricStore: metrics.NewMetricStore(),
+		Scheme:      mgr.GetScheme(),
+	}
 
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":2112", nil)
+	if err = controller.SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Template")
+		os.Exit(1)
+	}
+
+	// // +kubebuilder:scaffold:builder
+
+	setupLog.Info("starting manager")
+	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+		setupLog.Error(err, "problem running manager")
+		os.Exit(1)
+	}
 }
 
 func main() {
+	opts := zap.Options{Level: zapcore.DebugLevel}
+	// opts.BindFlags(flag.CommandLine)
+	// flag.Parse()
+	setupLogger(opts)
+
 	var root = &cobra.Command{
 		Use:   "elasticsearch-exporter",
 		Short: "Run elasticsearch logs exporter",
 		Args:  cobra.MinimumNArgs(0),
-		Run:   runServer,
+		Run:   runController,
 	}
-	root.PersistentFlags().String("indexPrefix", "", "Filebeat index prefix, example: filebeat-7.10.2-")
+	root.PersistentFlags().String("metrics-addr", ":8080", "The address the metric endpoint binds to.")
+	root.PersistentFlags().Bool("enable-leader-election", false,
+		"Enable leader election for controller manager. "+
+			"Enabling this will ensure there is only one active controller manager.")
 	root.PersistentFlags().String("url", "", "ElasticSearch url")
 	root.PersistentFlags().String("username", "", "ElasticSearch username")
-	root.PersistentFlags().Duration("interval", 1*time.Minute, "Query interval")
-	root.PersistentFlags().StringArray("clusters", []string{}, "List of clusters")
+	root.PersistentFlags().Duration("sync-period", 1*time.Minute, "Sync period")
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
