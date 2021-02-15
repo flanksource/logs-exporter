@@ -1,4 +1,4 @@
-module github.com/flanksource/elasticsearch-exporter
+module github.com/flanksource/logs-exporter
 
 go 1.14
 

@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	elasticv1 "github.com/flanksource/elasticsearch-exporter/pkg/api/v1"
-	"github.com/flanksource/elasticsearch-exporter/pkg/controllers"
-	"github.com/flanksource/elasticsearch-exporter/pkg/metrics"
+	elasticv1 "github.com/flanksource/logs-exporter/pkg/api/v1"
+	"github.com/flanksource/logs-exporter/pkg/controllers"
+	"github.com/flanksource/logs-exporter/pkg/metrics"
 	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -123,7 +123,7 @@ func main() {
 	setupLogger(opts)
 
 	var root = &cobra.Command{
-		Use:   "elasticsearch-exporter",
+		Use:   "logs-exporter",
 		Short: "Run elasticsearch logs exporter",
 		Args:  cobra.MinimumNArgs(0),
 		Run:   runController,

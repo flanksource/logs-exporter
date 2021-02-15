@@ -2,8 +2,8 @@ apiVersion: v1
 kind: Namespace
 metadata:
   labels:
-    control-plane: elastic-exporter
-  name: elastic-exporter-system
+    control-plane: logs-exporter
+  name: logs-exporter-system
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -11,9 +11,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: elasticmetrics.elastic.flanksource.com
+  name: elasticmetrics.logs.metrics.flanksource.com
 spec:
-  group: elastic.flanksource.com
+  group: logs.metrics.flanksource.com
   names:
     kind: ElasticMetric
     listKind: ElasticMetricList
@@ -80,13 +80,13 @@ status:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: elastic-exporter-manager
+  name: logs-exporter-manager
   namespace: platform-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: elastic-exporter-leader-election-role
+  name: logs-exporter-leader-election-role
   namespace: platform-system
 rules:
 - apiGroups:
@@ -120,7 +120,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: elastic-exporter-manager-role
+  name: logs-exporter-manager-role
 rules:
 - apiGroups:
   - '*'
@@ -132,46 +132,46 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: elastic-exporter-leader-election-rolebinding
+  name: logs-exporter-leader-election-rolebinding
   namespace: platform-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: elastic-exporter-leader-election-role
+  name: logs-exporter-leader-election-role
 subjects:
 - kind: ServiceAccount
-  name: elastic-exporter-manager
+  name: logs-exporter-manager
   namespace: platform-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: elastic-exporter-manager-rolebinding
+  name: logs-exporter-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: elastic-exporter-manager-role
+  name: logs-exporter-manager-role
 subjects:
 - kind: ServiceAccount
-  name: elastic-exporter-manager
+  name: logs-exporter-manager
   namespace: platform-system
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    control-plane: elastic-exporter
-  name: elastic-exporter-controller-manager
+    control-plane: logs-exporter
+  name: logs-exporter-controller-manager
   namespace: platform-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      control-plane: elastic-exporter
+      control-plane: logs-exporter
   template:
     metadata:
       labels:
-        control-plane: elastic-exporter
+        control-plane: logs-exporter
     spec:
       containers:
       - args:
@@ -197,5 +197,5 @@ spec:
           requests:
             cpu: 100m
             memory: 20Mi
-      serviceAccount: elastic-exporter-manager
+      serviceAccount: logs-exporter-manager
       terminationGracePeriodSeconds: 10

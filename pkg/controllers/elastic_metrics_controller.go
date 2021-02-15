@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	elasticv1 "github.com/flanksource/elasticsearch-exporter/pkg/api/v1"
-	"github.com/flanksource/elasticsearch-exporter/pkg/metrics"
-	"github.com/flanksource/elasticsearch-exporter/pkg/query"
+	elasticv1 "github.com/flanksource/logs-exporter/pkg/api/v1"
+	"github.com/flanksource/logs-exporter/pkg/metrics"
+	"github.com/flanksource/logs-exporter/pkg/query"
 	"github.com/flanksource/template-operator/k8s"
 	"github.com/go-logr/logr"
 	"github.com/olivere/elastic/v7"

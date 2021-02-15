@@ -4,9 +4,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: elasticmetrics.elastic.flanksource.com
+  name: elasticmetrics.logs.metrics.flanksource.com
 spec:
-  group: elastic.flanksource.com
+  group: logs.metrics.flanksource.com
   names:
     kind: ElasticMetric
     listKind: ElasticMetricList

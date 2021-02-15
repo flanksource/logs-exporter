@@ -1,6 +1,6 @@
-// Package v1 contains API Schema definitions for the elastic.flanksource.com v1 API group
+// Package v1 contains API Schema definitions for the logs.metrics.flanksource.com v1 API group
 // +kubebuilder:object:generate=true
-// +groupName=elastic.flanksource.com
+// +groupName=logs.metrics.flanksource.com
 package v1
 
 import (
@@ -8,11 +8,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
 
-const ApiVersion = "elastic.flanksource.com/v1"
+const ApiVersion = "logs.metrics.flanksource.com/v1"
 
 var (
 	// GroupVersion is group version used to register these objects
-	GroupVersion = schema.GroupVersion{Group: "elastic.flanksource.com", Version: "v1"}
+	GroupVersion = schema.GroupVersion{Group: "logs.metrics.flanksource.com", Version: "v1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
