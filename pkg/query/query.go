@@ -1,4 +1,4 @@
-package main
+package query
 
 import (
 	"context"
@@ -10,27 +10,27 @@ import (
 )
 
 type Query struct {
-	client      *elastic.Client
-	fieldName   string
-	clusterName string
-	interval    time.Duration
+	client          *elastic.Client
+	fieldName       string
+	interval        time.Duration
+	aggregationName string
 }
 
 type QueryResult map[string]int64
 
-func NewQuery(client *elastic.Client, clusterName, fieldName string, interval time.Duration) *Query {
+func NewQuery(client *elastic.Client, fieldName string, interval time.Duration) *Query {
 	query := &Query{
-		client:      client,
-		fieldName:   fieldName,
-		clusterName: clusterName,
-		interval:    interval,
+		client:          client,
+		fieldName:       fieldName,
+		interval:        interval,
+		aggregationName: "documents",
 	}
 
 	return query
 }
 
-func (q *Query) Query(ctx context.Context, indexName string) (QueryResult, error) {
-	query := q.getQuery()
+func (q *Query) Query(ctx context.Context, indexName string, fields map[string]string) (QueryResult, error) {
+	query := q.getQuery(fields)
 
 	result, err := q.getResult(ctx, indexName, query)
 	if err != nil {
@@ -40,7 +40,7 @@ func (q *Query) Query(ctx context.Context, indexName string) (QueryResult, error
 	return q.decodeResult(result)
 }
 
-func (q *Query) getQuery() elastic.Query {
+func (q *Query) getQuery(fields map[string]string) elastic.Query {
 	now := time.Now()
 	formatForES := "2006-01-02T15:04:05-07:00"
 	nowStr := now.Format(formatForES)
@@ -49,13 +49,18 @@ func (q *Query) getQuery() elastic.Query {
 	gt := lt.Add(time.Duration(-1 * q.interval))
 	gtStr := gt.Format(formatForES)
 
-	boolQuery := elastic.NewBoolQuery()
-	boolQuery.Must(
-		elastic.NewTermQuery("fields.cluster", q.clusterName),
+	queries := []elastic.Query{
 		elastic.NewRangeQuery("@timestamp").
 			Gt(gtStr).
 			Lt(ltStr),
-	)
+	}
+
+	for k, v := range fields {
+		queries = append(queries, elastic.NewTermQuery(k, v))
+	}
+
+	boolQuery := elastic.NewBoolQuery()
+	boolQuery.Must(queries...)
 
 	return boolQuery
 }
@@ -66,13 +71,13 @@ func (q *Query) getResult(ctx context.Context, indexName string, query elastic.Q
 		Index(indexName).
 		Query(query).
 		Size(0).
-		Aggregation(aggregationName, aggr).
+		Aggregation(q.aggregationName, aggr).
 		Pretty(true).
 		Do(context.Background())
 }
 
 func (q *Query) decodeResult(result *elastic.SearchResult) (QueryResult, error) {
-	rawMsg := result.Aggregations[aggregationName]
+	rawMsg := result.Aggregations[q.aggregationName]
 	var ar elastic.AggregationBucketKeyItems
 	err := json.Unmarshal(rawMsg, &ar)
 	if err != nil {

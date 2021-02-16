@@ -1,4 +1,4 @@
-package main
+package query
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func latestIndex(client *elastic.Client, indexPrefix string) (string, error) {
+func LatestIndex(client *elastic.Client, indexPrefix string) (string, error) {
 	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 
 	resp, err := client.CatIndices().Do(ctx)

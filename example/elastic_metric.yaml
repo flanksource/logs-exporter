@@ -1,0 +1,14 @@
+apiVersion: metrics.flanksource.com/v1
+kind: ElasticLogs
+metadata:
+  name: document-counts
+spec:
+  indexPrefix: "filebeat-7.10.2-*"
+  tuples:
+    - metricName: elastic_documents_by_namespace_cluster_node 
+      filters:
+        cluster: fields.cluster
+        namespace: kubernetes.namespace
+      aggregate:
+        name: node
+        field: kubernetes.node.name
