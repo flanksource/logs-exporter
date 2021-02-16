@@ -27,18 +27,24 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-func getClient(url, username, password string) (*elastic.Client, error) {
+func getClient(url, username, password, host string) (*elastic.Client, error) {
 	tr := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 	}
 	httpClient := &http.Client{Transport: tr}
 
-	c, err := elastic.NewSimpleClient(
+	options := []elastic.ClientOptionFunc{
 		elastic.SetURL(url),
 		elastic.SetMaxRetries(10),
 		elastic.SetBasicAuth(username, password),
 		elastic.SetHttpClient(httpClient),
-	)
+	}
+
+	if host != "" {
+		options = append(options, elastic.SetHeaders(http.Header{"Host": []string{host}}))
+	}
+
+	c, err := elastic.NewSimpleClient(options...)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to create elasticsearch client")
@@ -72,11 +78,12 @@ func runController(cmd *cobra.Command, args []string) {
 	syncPeriod, _ := cmd.Flags().GetDuration("sync-period")
 	enableLeaderElection, _ := cmd.Flags().GetBool("enable-leader-election")
 
-	url, _ := cmd.Flags().GetString("url")
-	username, _ := cmd.Flags().GetString("username")
+	url := os.Getenv("ELASTIC_URL")
+	username := os.Getenv("ELASTIC_USERNAME")
 	password := os.Getenv("ELASTIC_PASSWORD")
+	host := os.Getenv("ELASTIC_HOST")
 
-	elasticClient, err := getClient(url, username, password)
+	elasticClient, err := getClient(url, username, password, host)
 	if err != nil {
 		setupLog.Error(err, "failed to get elastic client")
 		os.Exit(1)
@@ -132,8 +139,6 @@ func main() {
 	root.PersistentFlags().Bool("enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	root.PersistentFlags().String("url", "", "ElasticSearch url")
-	root.PersistentFlags().String("username", "", "ElasticSearch username")
 	root.PersistentFlags().Duration("sync-period", 1*time.Minute, "Sync period")
 
 	if err := root.Execute(); err != nil {

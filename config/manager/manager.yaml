@@ -26,8 +26,6 @@ spec:
         - image: controller:latest
           args:
             - --enable-leader-election
-            - --username=elastic
-            - --url=https://logs.example.k8s
           name: manager
           resources:
             limits:
@@ -36,5 +34,26 @@ spec:
             requests:
               cpu: 100m
               memory: 20Mi
+          env:
+            - name: ELASTIC_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: logs-exporter-elastic
+                  key: username
+            - name: ELASTIC_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: logs-exporter-elastic
+                  key: password
+            - name: ELASTIC_URL
+              valueFrom:
+                secretKeyRef:
+                  name: logs-exporter-elastic
+                  key: url
+            - name: ELASTIC_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: logs-exporter-elastic
+                  key: host
       terminationGracePeriodSeconds: 10
       serviceAccount: logs-exporter-manager

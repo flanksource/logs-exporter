@@ -188,7 +188,28 @@ spec:
         - --metrics-addr=127.0.0.1:8080
         - --enable-leader-election
         - --sync-period=20s
-        image: controller:latest
+        env:
+        - name: ELASTIC_USERNAME
+          valueFrom:
+            secretKeyRef:
+              key: username
+              name: logs-exporter-elastic
+        - name: ELASTIC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: password
+              name: logs-exporter-elastic
+        - name: ELASTIC_URL
+          valueFrom:
+            secretKeyRef:
+              key: url
+              name: logs-exporter-elastic
+        - name: ELASTIC_HOST
+          valueFrom:
+            secretKeyRef:
+              key: host
+              name: logs-exporter-elastic
+        image: flanksource/logs-exporter:v1
         name: manager
         resources:
           limits:
