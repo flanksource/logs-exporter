@@ -4,18 +4,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: elasticmetrics.logs.metrics.flanksource.com
+  name: elasticlogs.metrics.flanksource.com
 spec:
-  group: logs.metrics.flanksource.com
+  group: metrics.flanksource.com
   names:
-    kind: ElasticMetric
-    listKind: ElasticMetricList
-    plural: elasticmetrics
-    singular: elasticmetric
+    kind: ElasticLogs
+    listKind: ElasticLogsList
+    plural: elasticlogs
+    singular: elasticlogs
   scope: Cluster
   validation:
     openAPIV3Schema:
-      description: ElasticMetric is the Schema for the elasticmetrics API
+      description: ElasticLogs is the Schema for the ElasticLogss API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -30,7 +30,7 @@ spec:
         metadata:
           type: object
         spec:
-          description: ElasticMetricSpec defines the desired state of ElasticMetric
+          description: ElasticLogsSpec defines the desired state of ElasticLogs
           properties:
             index:
               type: string
@@ -55,7 +55,7 @@ spec:
               type: array
           type: object
         status:
-          description: ElasticMetricStatus defines the observed state of Template
+          description: ElasticLogsStatus defines the observed state of Template
           type: object
       type: object
   version: v1

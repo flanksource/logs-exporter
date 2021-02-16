@@ -1,5 +1,5 @@
-apiVersion: logs.metrics.flanksource.com/v1
-kind: ElasticMetric
+apiVersion: metrics.flanksource.com/v1
+kind: ElasticLogs
 metadata:
   name: document-counts
 spec:

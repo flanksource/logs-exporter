@@ -51,8 +51,8 @@ func init() {
 	prometheus.MustRegister(documentsCount)
 }
 
-// ElasticMetricReconciler reconciles a ElasticMetric object
-type ElasticMetricReconciler struct {
+// ElasticLogsReconciler reconciles a ElasticLogs object
+type ElasticLogsReconciler struct {
 	ControllerClient client.Client
 	Elastic          *elastic.Client
 	Log              logr.Logger
@@ -63,10 +63,10 @@ type ElasticMetricReconciler struct {
 
 // +kubebuilder:rbac:groups="*",resources="*",verbs="*"
 
-func (r *ElasticMetricReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log := r.Log.WithValues("elasticmetric", req.NamespacedName)
+func (r *ElasticLogsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log := r.Log.WithValues("ElasticLogs", req.NamespacedName)
 
-	metric := elasticv1.ElasticMetric{}
+	metric := elasticv1.ElasticLogs{}
 	if err := r.ControllerClient.Get(ctx, req.NamespacedName, &metric); err != nil {
 		if kerrors.IsNotFound(err) {
 			log.Error(err, "elastic metric not found")
@@ -83,8 +83,8 @@ func (r *ElasticMetricReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{}, nil
 }
 
-func (r *ElasticMetricReconciler) Query(metric elasticv1.ElasticMetric) error {
-	log := r.Log.WithValues("elasticmetric", types.NamespacedName{Name: metric.Name, Namespace: metric.Namespace})
+func (r *ElasticLogsReconciler) Query(metric elasticv1.ElasticLogs) error {
+	log := r.Log.WithValues("ElasticLogs", types.NamespacedName{Name: metric.Name, Namespace: metric.Namespace})
 	// index, err := query.LatestIndex(r.Elastic, metric.Spec.Index)
 	// if err != nil {
 	// 	return errors.Wrap(err, "failed to get latest index")
@@ -100,7 +100,7 @@ func (r *ElasticMetricReconciler) Query(metric elasticv1.ElasticMetric) error {
 	return nil
 }
 
-func (r *ElasticMetricReconciler) queryTuple(indexName string, tuple elasticv1.Tuple) error {
+func (r *ElasticLogsReconciler) queryTuple(indexName string, tuple elasticv1.Tuple) error {
 	q := query.NewQuery(r.Elastic, tuple.Aggregate.Field, 15*time.Minute)
 
 	labels := []string{}
@@ -142,10 +142,10 @@ func (r *ElasticMetricReconciler) queryTuple(indexName string, tuple elasticv1.T
 	return nil
 }
 
-func (r *ElasticMetricReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *ElasticLogsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ControllerClient = mgr.GetClient()
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&elasticv1.ElasticMetric{}).
+		For(&elasticv1.ElasticLogs{}).
 		Complete(r)
 }
 

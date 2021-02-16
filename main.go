@@ -95,7 +95,7 @@ func runController(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	controller := &controllers.ElasticMetricReconciler{
+	controller := &controllers.ElasticLogsReconciler{
 		Log:         ctrl.Log.WithName("controllers").WithName("Template"),
 		Elastic:     elasticClient,
 		MetricStore: metrics.NewMetricStore(),

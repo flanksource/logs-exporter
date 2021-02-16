@@ -4,8 +4,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// ElasticMetricSpec defines the desired state of ElasticMetric
-type ElasticMetricSpec struct {
+// ElasticLogsSpec defines the desired state of ElasticLogs
+type ElasticLogsSpec struct {
 	Index string `json:"index,omitempty"`
 	// IndexPrefix string  `json:"indexPrefix,omitempty"`
 	Tuples []Tuple `json:"tuple,omitempty"`
@@ -22,32 +22,32 @@ type Pair struct {
 	Field string `json:"field,omitempty"`
 }
 
-// ElasticMetricStatus defines the observed state of Template
-type ElasticMetricStatus struct {
+// ElasticLogsStatus defines the observed state of Template
+type ElasticLogsStatus struct {
 }
 
 // +kubebuilder:object:root=true
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:scope="Cluster"
-// ElasticMetric is the Schema for the elasticmetrics API
-type ElasticMetric struct {
+// ElasticLogs is the Schema for the ElasticLogss API
+type ElasticLogs struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ElasticMetricSpec   `json:"spec,omitempty"`
-	Status ElasticMetricStatus `json:"status,omitempty"`
+	Spec   ElasticLogsSpec   `json:"spec,omitempty"`
+	Status ElasticLogsStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// ElasticMetricList contains a list of ElasticMetric
-type ElasticMetricList struct {
+// ElasticLogsList contains a list of ElasticLogs
+type ElasticLogsList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []ElasticMetric `json:"items"`
+	Items           []ElasticLogs `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&ElasticMetric{}, &ElasticMetricList{})
+	SchemeBuilder.Register(&ElasticLogs{}, &ElasticLogsList{})
 }
