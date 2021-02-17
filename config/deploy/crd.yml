@@ -34,7 +34,7 @@ spec:
           properties:
             index:
               type: string
-            tuple:
+            tuples:
               description: IndexPrefix string  `json:"indexPrefix,omitempty"`
               items:
                 properties:

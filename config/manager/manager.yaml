@@ -24,8 +24,6 @@ spec:
     spec:
       containers:
         - image: controller:latest
-          args:
-            - --enable-leader-election
           name: manager
           resources:
             limits:

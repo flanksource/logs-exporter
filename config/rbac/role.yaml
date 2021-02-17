@@ -7,8 +7,8 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
-  - '*'
+  - metrics.flanksource.com
   resources:
-  - '*'
+  - elasticlogs
   verbs:
   - '*'

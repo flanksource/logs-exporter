@@ -41,7 +41,7 @@ spec:
           properties:
             index:
               type: string
-            tuple:
+            tuples:
               description: IndexPrefix string  `json:"indexPrefix,omitempty"`
               items:
                 properties:
@@ -123,9 +123,9 @@ metadata:
   name: logs-exporter-manager-role
 rules:
 - apiGroups:
-  - '*'
+  - metrics.flanksource.com
   resources:
-  - '*'
+  - elasticlogs
   verbs:
   - '*'
 ---
@@ -186,7 +186,6 @@ spec:
           name: https
       - args:
         - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
         - --sync-period=20s
         env:
         - name: ELASTIC_USERNAME

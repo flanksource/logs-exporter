@@ -3,7 +3,7 @@ kind: ElasticLogs
 metadata:
   name: document-counts
 spec:
-  indexPrefix: "filebeat-7.10.2-*"
+  index: "filebeat-7.10.2-*"
   tuples:
     - metricName: elastic_documents_by_namespace_cluster_node 
       filters:
