@@ -61,10 +61,12 @@ type ElasticLogsReconciler struct {
 	Cache            *k8s.SchemaCache
 }
 
-// +kubebuilder:rbac:groups="*",resources="*",verbs="*"
+// +kubebuilder:rbac:groups="metrics.flanksource.com",resources="elasticlogs",verbs="*"
 
 func (r *ElasticLogsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("ElasticLogs", req.NamespacedName)
+
+	log.Info("Started reconciling")
 
 	metric := elasticv1.ElasticLogs{}
 	if err := r.ControllerClient.Get(ctx, req.NamespacedName, &metric); err != nil {
@@ -77,21 +79,20 @@ func (r *ElasticLogsReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 	}
 
 	if err := r.Query(metric); err != nil {
+		log.Error(err, "error querying elastic")
 		return reconcile.Result{}, err
 	}
+
+	log.Info("After reconciling")
 
 	return ctrl.Result{}, nil
 }
 
 func (r *ElasticLogsReconciler) Query(metric elasticv1.ElasticLogs) error {
 	log := r.Log.WithValues("ElasticLogs", types.NamespacedName{Name: metric.Name, Namespace: metric.Namespace})
-	// index, err := query.LatestIndex(r.Elastic, metric.Spec.Index)
-	// if err != nil {
-	// 	return errors.Wrap(err, "failed to get latest index")
-	// }
-	// log.Info("Latest index", "index", index)
 
 	for _, tuple := range metric.Spec.Tuples {
+		log.Info("Query tuple %s", "name", tuple.MetricName)
 		if err := r.queryTuple(metric.Spec.Index, tuple); err != nil {
 			log.Error(err, "failed to query tuple", "tuple", tuple)
 		}
@@ -120,6 +121,7 @@ func (r *ElasticLogsReconciler) queryTuple(indexName string, tuple elasticv1.Tup
 			logPairs = append(logPairs, v.Field)
 			logPairs = append(logPairs, v.Value)
 		}
+		r.Log.Info("Query", logPairs...)
 		results, err := q.Query(context.Background(), indexName, filters)
 		if err != nil {
 			r.Log.Error(err, "failed to query", logPairs...)
