@@ -6,9 +6,8 @@ import (
 
 // ElasticLogsSpec defines the desired state of ElasticLogs
 type ElasticLogsSpec struct {
-	Index string `json:"index,omitempty"`
-	// IndexPrefix string  `json:"indexPrefix,omitempty"`
-	Tuples []Tuple `json:"tuple,omitempty"`
+	Index  string  `json:"index,omitempty"`
+	Tuples []Tuple `json:"tuples,omitempty"`
 }
 
 type Tuple struct {
