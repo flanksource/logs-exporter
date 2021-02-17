@@ -37,7 +37,6 @@ spec:
             index:
               type: string
             tuples:
-              description: IndexPrefix string  `json:"indexPrefix,omitempty"`
               items:
                 properties:
                   aggregate:

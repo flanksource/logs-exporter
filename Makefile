@@ -64,6 +64,12 @@ generate: controller-gen
 docker-build:
 	docker build . -t ${IMG}
 
+docker-push-%:
+	docker build ./ -f ./Dockerfile -t ${IMG}
+	docker tag $(IMG) $*/$(IMG)
+	docker push  $*/$(IMG)
+	kubectl set image deployment/$(NAME) $(NAME)=$*/$(IMG)
+
 # Push the docker image
 docker-push:
 	docker push ${IMG}

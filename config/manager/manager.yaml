@@ -48,10 +48,25 @@ spec:
                 secretKeyRef:
                   name: logs-exporter-elastic
                   key: url
-            - name: ELASTIC_HOST
-              valueFrom:
-                secretKeyRef:
-                  name: logs-exporter-elastic
-                  key: host
+          ports:
+            - containerPort: 8080
+              name: prometheus
       terminationGracePeriodSeconds: 10
       serviceAccount: logs-exporter-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logs-exporter
+  namespace: platform-system
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    control-plane: logs-exporter
+spec:
+  selector:
+    control-plane: logs-exporter
+  ports:
+    - name: prometheus
+      protocol: TCP
+      port: 8080

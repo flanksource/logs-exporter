@@ -42,7 +42,6 @@ spec:
             index:
               type: string
             tuples:
-              description: IndexPrefix string  `json:"indexPrefix,omitempty"`
               items:
                 properties:
                   aggregate:
@@ -156,6 +155,23 @@ subjects:
   name: logs-exporter-manager
   namespace: platform-system
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    control-plane: logs-exporter
+  name: logs-exporter-logs-exporter
+  namespace: platform-system
+spec:
+  ports:
+  - name: prometheus
+    port: 8080
+    protocol: TCP
+  selector:
+    control-plane: logs-exporter
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -185,7 +201,7 @@ spec:
         - containerPort: 8443
           name: https
       - args:
-        - --metrics-addr=127.0.0.1:8080
+        - --metrics-addr=0.0.0.0:8080
         - --sync-period=20s
         env:
         - name: ELASTIC_USERNAME
@@ -203,13 +219,11 @@ spec:
             secretKeyRef:
               key: url
               name: logs-exporter-elastic
-        - name: ELASTIC_HOST
-          valueFrom:
-            secretKeyRef:
-              key: host
-              name: logs-exporter-elastic
-        image: flanksource/logs-exporter:v1
+        image: docker.io/flanksource/logs-exporter:v0.1.0
         name: manager
+        ports:
+        - containerPort: 8080
+          name: prometheus
         resources:
           limits:
             cpu: 100m
