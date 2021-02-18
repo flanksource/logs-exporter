@@ -1,16 +1,14 @@
 package main
 
 import (
-	"crypto/tls"
-	"net/http"
 	"os"
 	"time"
 
+	"github.com/flanksource/commons/logger"
+	"github.com/flanksource/kommons"
 	elasticv1 "github.com/flanksource/logs-exporter/pkg/api/v1"
 	"github.com/flanksource/logs-exporter/pkg/controllers"
 	"github.com/flanksource/logs-exporter/pkg/metrics"
-	elastic "github.com/olivere/elastic/v7"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	zaplogfmt "github.com/sykesm/zap-logfmt"
 	uzap "go.uber.org/zap"
@@ -26,32 +24,6 @@ var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")
 )
-
-func getClient(url, username, password, host string) (*elastic.Client, error) {
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-	httpClient := &http.Client{Transport: tr}
-
-	options := []elastic.ClientOptionFunc{
-		elastic.SetURL(url),
-		elastic.SetMaxRetries(10),
-		elastic.SetBasicAuth(username, password),
-		elastic.SetHttpClient(httpClient),
-	}
-
-	if host != "" {
-		options = append(options, elastic.SetHeaders(http.Header{"Host": []string{host}}))
-	}
-
-	c, err := elastic.NewSimpleClient(options...)
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to create elasticsearch client")
-	}
-
-	return c, nil
-}
 
 func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
@@ -78,17 +50,6 @@ func runController(cmd *cobra.Command, args []string) {
 	syncPeriod, _ := cmd.Flags().GetDuration("sync-period")
 	enableLeaderElection, _ := cmd.Flags().GetBool("enable-leader-election")
 
-	url := os.Getenv("ELASTIC_URL")
-	username := os.Getenv("ELASTIC_USERNAME")
-	password := os.Getenv("ELASTIC_PASSWORD")
-	host := os.Getenv("ELASTIC_HOST")
-
-	elasticClient, err := getClient(url, username, password, host)
-	if err != nil {
-		setupLog.Error(err, "failed to get elastic client")
-		os.Exit(1)
-	}
-
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
 		MetricsBindAddress: metricsAddr,
@@ -102,9 +63,16 @@ func runController(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	client := kommons.NewClient(mgr.GetConfig(), logger.StandardLogger())
+	clientset, err := client.GetClientset()
+	if err != nil {
+		setupLog.Error(err, "failed to get clientset")
+		os.Exit(1)
+	}
+
 	controller := &controllers.ElasticLogsReconciler{
 		Log:         ctrl.Log.WithName("controllers").WithName("Template"),
-		Elastic:     elasticClient,
+		Clientset:   clientset,
 		MetricStore: metrics.NewMetricStore(),
 		Scheme:      mgr.GetScheme(),
 	}

@@ -3,6 +3,8 @@ module github.com/flanksource/logs-exporter
 go 1.14
 
 require (
+	github.com/flanksource/commons v1.4.3
+	github.com/flanksource/kommons v0.1.9
 	github.com/flanksource/template-operator v0.1.10
 	github.com/go-co-op/gocron v0.6.0
 	github.com/go-logr/logr v0.3.0

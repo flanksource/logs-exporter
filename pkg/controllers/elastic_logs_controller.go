@@ -18,7 +18,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	elasticv1 "github.com/flanksource/logs-exporter/pkg/api/v1"
@@ -26,12 +25,14 @@ import (
 	"github.com/flanksource/logs-exporter/pkg/query"
 	"github.com/flanksource/template-operator/k8s"
 	"github.com/go-logr/logr"
-	"github.com/olivere/elastic/v7"
+	elastic "github.com/olivere/elastic/v7"
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -54,7 +55,7 @@ func init() {
 // ElasticLogsReconciler reconciles a ElasticLogs object
 type ElasticLogsReconciler struct {
 	ControllerClient client.Client
-	Elastic          *elastic.Client
+	Clientset        *kubernetes.Clientset
 	Log              logr.Logger
 	MetricStore      *metrics.MetricStore
 	Scheme           *runtime.Scheme
@@ -62,6 +63,7 @@ type ElasticLogsReconciler struct {
 }
 
 // +kubebuilder:rbac:groups="metrics.flanksource.com",resources="elasticlogs",verbs="*"
+// +kubebuilder:rbac:groups="",resources="secrets",verbs="get;list"
 
 func (r *ElasticLogsReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("ElasticLogs", req.NamespacedName)
@@ -78,22 +80,39 @@ func (r *ElasticLogsReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 		return reconcile.Result{}, err
 	}
 
-	if err := r.Query(metric); err != nil {
+	passwordSecret, err := r.Clientset.CoreV1().Secrets(metric.Spec.Password.Namespace).Get(ctx, metric.Spec.Password.Name, metav1.GetOptions{})
+	if err != nil {
+		log.Error(err, "failed to find password secret")
+		return reconcile.Result{}, err
+	}
+	password, found := passwordSecret.Data[metric.Spec.Password.Key]
+	if !found {
+		err := errors.Errorf("failed to find field %s in secret %s/%s", metric.Spec.Password.Key, passwordSecret.Namespace, passwordSecret.Name)
+		log.Error(err, "failed to find field password")
+		return reconcile.Result{}, err
+	}
+	elasticClient, err := query.GetClient(metric.Spec.URL, metric.Spec.Username, string(password))
+	if err != nil {
+		log.Error(err, "failed to create elastic client")
+		return reconcile.Result{}, err
+	}
+
+	if err := r.Query(elasticClient, metric); err != nil {
 		log.Error(err, "error querying elastic")
 		return reconcile.Result{}, err
 	}
 
-	log.Info("After reconciling")
+	log.Info("Finished reconciling")
 
 	return ctrl.Result{}, nil
 }
 
-func (r *ElasticLogsReconciler) Query(metric elasticv1.ElasticLogs) error {
+func (r *ElasticLogsReconciler) Query(elasticClient *elastic.Client, metric elasticv1.ElasticLogs) error {
 	log := r.Log.WithValues("ElasticLogs", types.NamespacedName{Name: metric.Name, Namespace: metric.Namespace})
 
 	for _, tuple := range metric.Spec.Tuples {
 		log.Info("Query tuple %s", "name", tuple.MetricName)
-		if err := r.queryTuple(metric.Spec.Index, tuple); err != nil {
+		if err := r.queryTuple(elasticClient, metric.Spec.Index, tuple); err != nil {
 			log.Error(err, "failed to query tuple", "tuple", tuple)
 		}
 	}
@@ -101,8 +120,8 @@ func (r *ElasticLogsReconciler) Query(metric elasticv1.ElasticLogs) error {
 	return nil
 }
 
-func (r *ElasticLogsReconciler) queryTuple(indexName string, tuple elasticv1.Tuple) error {
-	q := query.NewQuery(r.Elastic, tuple.Aggregate.Field, 15*time.Minute)
+func (r *ElasticLogsReconciler) queryTuple(elasticClient *elastic.Client, indexName string, tuple elasticv1.Tuple) error {
+	q := query.NewQuery(elasticClient, tuple.Aggregate.Field, 15*time.Minute)
 
 	labels := []string{}
 	for k, _ := range tuple.Filters {
@@ -111,7 +130,7 @@ func (r *ElasticLogsReconciler) queryTuple(indexName string, tuple elasticv1.Tup
 	labels = append(labels, aggregateName(tuple.Aggregate.Name))
 	gauge := r.MetricStore.GetGauge(tuple.MetricName, labels)
 
-	err := query.AllCombinations(r.Elastic, indexName, tuple.Filters, func(fieldValues map[string]query.Filter) {
+	err := query.AllCombinations(elasticClient, indexName, tuple.Filters, func(fieldValues map[string]query.Filter) {
 		filters := map[string]string{}
 		logPairs := []interface{}{}
 		commonLabelMap := map[string]string{}
@@ -152,5 +171,5 @@ func (r *ElasticLogsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func aggregateName(label string) string {
-	return fmt.Sprintf("aggregate_%s", label)
+	return label
 }

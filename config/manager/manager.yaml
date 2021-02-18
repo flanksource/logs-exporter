@@ -32,22 +32,6 @@ spec:
             requests:
               cpu: 100m
               memory: 20Mi
-          env:
-            - name: ELASTIC_USERNAME
-              valueFrom:
-                secretKeyRef:
-                  name: logs-exporter-elastic
-                  key: username
-            - name: ELASTIC_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: logs-exporter-elastic
-                  key: password
-            - name: ELASTIC_URL
-              valueFrom:
-                secretKeyRef:
-                  name: logs-exporter-elastic
-                  key: url
           ports:
             - containerPort: 8080
               name: prometheus

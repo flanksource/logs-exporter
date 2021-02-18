@@ -41,6 +41,15 @@ spec:
           properties:
             index:
               type: string
+            password:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+              type: object
             tuples:
               items:
                 properties:
@@ -59,6 +68,10 @@ spec:
                     type: string
                 type: object
               type: array
+            url:
+              type: string
+            username:
+              type: string
           type: object
         status:
           description: ElasticLogsStatus defines the observed state of Template
@@ -121,6 +134,12 @@ metadata:
   creationTimestamp: null
   name: logs-exporter-manager-role
 rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get;list
 - apiGroups:
   - metrics.flanksource.com
   resources:
@@ -203,23 +222,7 @@ spec:
       - args:
         - --metrics-addr=0.0.0.0:8080
         - --sync-period=20s
-        env:
-        - name: ELASTIC_USERNAME
-          valueFrom:
-            secretKeyRef:
-              key: username
-              name: logs-exporter-elastic
-        - name: ELASTIC_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              key: password
-              name: logs-exporter-elastic
-        - name: ELASTIC_URL
-          valueFrom:
-            secretKeyRef:
-              key: url
-              name: logs-exporter-elastic
-        image: docker.io/flanksource/logs-exporter:v0.1.0
+        image: docker.io/flanksource/logs-exporter:v0.1.0-dev4
         name: manager
         ports:
         - containerPort: 8080
