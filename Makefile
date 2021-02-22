@@ -2,6 +2,7 @@
 IMG ?= controller:latest
 # Produce CRDs that work back to Kubernetes 1.11 (no version conversion)
 CRD_OPTIONS ?= "crd:trivialVersions=true"
+NAME ?= logs-exporter
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -63,6 +64,12 @@ generate: controller-gen
 # Build the docker image
 docker-build:
 	docker build . -t ${IMG}
+
+docker-push-%:
+	docker build ./ -f ./Dockerfile -t ${IMG}
+	docker tag $(IMG) $*/$(IMG)
+	docker push  $*/$(IMG)
+	kubectl set image deployment/$(NAME) $(NAME)=$*/$(IMG)
 
 # Push the docker image
 docker-push:

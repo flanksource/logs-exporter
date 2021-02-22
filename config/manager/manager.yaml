@@ -24,10 +24,6 @@ spec:
     spec:
       containers:
         - image: controller:latest
-          args:
-            - --enable-leader-election
-            - --username=elastic
-            - --url=https://logs.example.k8s
           name: manager
           resources:
             limits:
@@ -36,5 +32,25 @@ spec:
             requests:
               cpu: 100m
               memory: 20Mi
+          ports:
+            - containerPort: 8080
+              name: prometheus
       terminationGracePeriodSeconds: 10
       serviceAccount: logs-exporter-manager
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logs-exporter
+  namespace: platform-system
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    control-plane: logs-exporter
+spec:
+  selector:
+    control-plane: logs-exporter
+  ports:
+    - name: prometheus
+      protocol: TCP
+      port: 8080

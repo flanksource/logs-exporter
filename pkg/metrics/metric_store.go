@@ -3,12 +3,12 @@ package metrics
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"sort"
 	"strings"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"sigs.k8s.io/controller-runtime/pkg/metrics"
 )
 
 type Gauge struct {
@@ -47,8 +47,6 @@ func (ms *MetricStore) GetGauge(name string, labels []string) *Gauge {
 		return gauge
 	}
 
-	fmt.Printf("setting labels: %v\n", labels)
-
 	gauge = &Gauge{
 		gauge: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -58,7 +56,7 @@ func (ms *MetricStore) GetGauge(name string, labels []string) *Gauge {
 			labels,
 		),
 	}
-	prometheus.MustRegister(gauge.gauge)
+	metrics.Registry.MustRegister(gauge.gauge)
 	ms.gauges[hash] = gauge
 	return gauge
 }

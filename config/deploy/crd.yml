@@ -34,8 +34,16 @@ spec:
           properties:
             index:
               type: string
-            tuple:
-              description: IndexPrefix string  `json:"indexPrefix,omitempty"`
+            password:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+              type: object
+            tuples:
               items:
                 properties:
                   aggregate:
@@ -53,6 +61,10 @@ spec:
                     type: string
                 type: object
               type: array
+            url:
+              type: string
+            username:
+              type: string
           type: object
         status:
           description: ElasticLogsStatus defines the observed state of Template

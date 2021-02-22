@@ -41,8 +41,16 @@ spec:
           properties:
             index:
               type: string
-            tuple:
-              description: IndexPrefix string  `json:"indexPrefix,omitempty"`
+            password:
+              properties:
+                key:
+                  type: string
+                name:
+                  type: string
+                namespace:
+                  type: string
+              type: object
+            tuples:
               items:
                 properties:
                   aggregate:
@@ -60,6 +68,10 @@ spec:
                     type: string
                 type: object
               type: array
+            url:
+              type: string
+            username:
+              type: string
           type: object
         status:
           description: ElasticLogsStatus defines the observed state of Template
@@ -123,9 +135,15 @@ metadata:
   name: logs-exporter-manager-role
 rules:
 - apiGroups:
-  - '*'
+  - ""
   resources:
-  - '*'
+  - secrets
+  verbs:
+  - get;list
+- apiGroups:
+  - metrics.flanksource.com
+  resources:
+  - elasticlogs
   verbs:
   - '*'
 ---
@@ -156,6 +174,23 @@ subjects:
   name: logs-exporter-manager
   namespace: platform-system
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    prometheus.io/scrape: "true"
+  labels:
+    control-plane: logs-exporter
+  name: logs-exporter-logs-exporter
+  namespace: platform-system
+spec:
+  ports:
+  - name: prometheus
+    port: 8080
+    protocol: TCP
+  selector:
+    control-plane: logs-exporter
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -185,11 +220,13 @@ spec:
         - containerPort: 8443
           name: https
       - args:
-        - --metrics-addr=127.0.0.1:8080
-        - --enable-leader-election
+        - --metrics-addr=0.0.0.0:8080
         - --sync-period=20s
-        image: controller:latest
+        image: docker.io/flanksource/logs-exporter:v0.1.0-dev4
         name: manager
+        ports:
+        - containerPort: 8080
+          name: prometheus
         resources:
           limits:
             cpu: 100m

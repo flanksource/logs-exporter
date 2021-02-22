@@ -6,9 +6,17 @@ import (
 
 // ElasticLogsSpec defines the desired state of ElasticLogs
 type ElasticLogsSpec struct {
-	Index string `json:"index,omitempty"`
-	// IndexPrefix string  `json:"indexPrefix,omitempty"`
-	Tuples []Tuple `json:"tuple,omitempty"`
+	Index    string    `json:"index,omitempty"`
+	URL      string    `json:"url,omitempty"`
+	Username string    `json:"username,omitempty"`
+	Password SecretRef `json:"password,omitempty"`
+	Tuples   []Tuple   `json:"tuples,omitempty"`
+}
+
+type SecretRef struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Key       string `json:"key,omitempty"`
 }
 
 type Tuple struct {
