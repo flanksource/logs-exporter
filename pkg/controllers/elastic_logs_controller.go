@@ -58,6 +58,7 @@ type ElasticLogsReconciler struct {
 	Clientset        *kubernetes.Clientset
 	Log              logr.Logger
 	MetricStore      *metrics.MetricStore
+	Interval         time.Duration
 	Scheme           *runtime.Scheme
 	Cache            *k8s.SchemaCache
 }
@@ -121,7 +122,7 @@ func (r *ElasticLogsReconciler) Query(elasticClient *elastic.Client, metric elas
 }
 
 func (r *ElasticLogsReconciler) queryTuple(elasticClient *elastic.Client, indexName string, tuple elasticv1.Tuple) error {
-	q := query.NewQuery(elasticClient, tuple.Aggregate.Field, 15*time.Minute)
+	q := query.NewQuery(elasticClient, tuple.Aggregate.Field, r.Interval)
 
 	labels := []string{}
 	for k, _ := range tuple.Filters {

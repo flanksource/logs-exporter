@@ -49,6 +49,7 @@ func runController(cmd *cobra.Command, args []string) {
 	metricsAddr, _ := cmd.Flags().GetString("metrics-addr")
 	syncPeriod, _ := cmd.Flags().GetDuration("sync-period")
 	enableLeaderElection, _ := cmd.Flags().GetBool("enable-leader-election")
+	queryInterval, _ := cmd.Flags().GetDuration("query-interval")
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:             scheme,
@@ -73,6 +74,7 @@ func runController(cmd *cobra.Command, args []string) {
 	controller := &controllers.ElasticLogsReconciler{
 		Log:         ctrl.Log.WithName("controllers").WithName("Template"),
 		Clientset:   clientset,
+		Interval:    queryInterval,
 		MetricStore: metrics.NewMetricStore(),
 		Scheme:      mgr.GetScheme(),
 	}
@@ -107,7 +109,8 @@ func main() {
 	root.PersistentFlags().Bool("enable-leader-election", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	root.PersistentFlags().Duration("sync-period", 1*time.Minute, "Sync period")
+	root.PersistentFlags().Duration("sync-period", 5*time.Minute, "Sync period")
+	root.PersistentFlags().Duration("query-interval", 5*time.Minute, "Query interval for counts gauge")
 
 	if err := root.Execute(); err != nil {
 		os.Exit(1)
