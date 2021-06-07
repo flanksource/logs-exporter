@@ -48,6 +48,7 @@ static: manifests
 	cd config/manager && kustomize edit set image controller=${IMG}
 	kustomize build config/crd > config/deploy/crd.yml
 	kustomize build config/default > config/deploy/operator.yml
+	kustomize build config/base > config/deploy/base.yml
 
 # Run go fmt against code
 fmt:
