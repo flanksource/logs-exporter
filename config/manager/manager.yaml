@@ -25,6 +25,9 @@ spec:
       containers:
         - image: controller:latest
           name: manager
+          args:
+            - "--metrics-addr=0.0.0.0:8080"
+            - --sync-period=20s
           resources:
             limits:
               cpu: 100m
@@ -35,6 +38,16 @@ spec:
           ports:
             - containerPort: 8080
               name: prometheus
+        - name: kube-rbac-proxy
+          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.5.0
+          args:
+          - "--secure-listen-address=0.0.0.0:8443"
+          - "--upstream=http://127.0.0.1:8080/"
+          - "--logtostderr=true"
+          - "--v=10"
+          ports:
+          - containerPort: 8443
+            name: https
       terminationGracePeriodSeconds: 10
       serviceAccount: logs-exporter-manager
 ---
